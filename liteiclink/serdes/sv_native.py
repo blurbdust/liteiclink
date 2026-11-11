@@ -586,12 +586,15 @@ class SVNative(LiteXModule):
                 self.submodules += meter
                 self.comb += freq.eq(meter.value)
 
-    def add_timing_constraints(self, platform, refclk, refclk_freq):
-        # The transceiver clocks are derived by derive_pll_clocks from the reference clock. Every
-        # crossing between them and sys goes through a synchroniser.
+    def add_timing_constraints(self, platform, refclk, refclk_freq, sys_clk="{sys_clk}"):
+        # derive_pll_clocks derives the transceiver clocks from the reference clock: the fabric sees
+        # each channel's TX clock as `...|tx_pma_ch.pclk_from_cgb[n]` and its RX clock as
+        # `...|rx_pma_deser|clk90b`. Every crossing between them and sys goes through a
+        # synchroniser, so sys is made asynchronous to all of them. `sys_clk` is a get_clocks
+        # pattern, braces included, and must match: TimeQuest only warns about an empty group.
         platform.add_period_constraint(refclk, 1e9/refclk_freq)
         platform.toolchain.additional_sdc_commands += [
-            "set_clock_groups -asynchronous -group [get_clocks {sys_clk}]",
+            f"set_clock_groups -asynchronous -group [get_clocks {sys_clk}]",
         ]
 
     def add_controls(self):
